@@ -1,0 +1,185 @@
+<?xml version="1.0"?>
+<!--
+  robot.urdf — кинематическая модель манипулятора.
+
+  Цепь руки — joint1..joint5 (5 степеней свободы). gripper_joint — привод
+  подвижной губки; в цепь руки не входит, в MoveIt вынесен отдельной группой.
+
+  Нуль модели: рука выпрямлена вверх, звенья на одной линии. Углы серв:
+      ось 1 = 90, ось 2 = 90, ось 3 = 10, ось 4 = 90, ось 5 = 0, захват = 0
+
+  Пересчёт:
+      q [рад] = sign * (servo - zero) * pi / 180
+      zero = {90, 90, 10, 90, 0, 0}
+      sign = {+1, -1, +1, -1, +1, +1}
+
+  Минусы у joint2 и joint4 — их оси в модели направлены против вращения серв.
+  Лимиты q получены из рабочих диапазонов серв и округлены наружу примерно
+  на 0.004°, чтобы стартовая поза проходила проверку MoveIt.
+
+  Система координат: X вправо, Y от наблюдателя в глубину, Z вверх.
+-->
+<robot name="minipulator">
+
+  <!-- ================= БАЗА ================= -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.0225" rpy="0 0 0"/>
+      <geometry><box size="0.09 0.09 0.045"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.0225" rpy="0 0 0"/>
+      <geometry><box size="0.09 0.09 0.045"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= ОСЬ 1: поворот основания (вокруг Z) ================= -->
+  <joint name="joint1" type="revolute">
+    <parent link="base_link"/>
+    <child link="link1"/>
+    <!-- стол -> вал 1: 45 мм -->
+    <origin xyz="0 0 0.045" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.5708" upper="1.5708" effort="2.5" velocity="1.5"/>
+  </joint>
+
+  <link name="link1">
+    <visual>
+      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.05 0.042"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.021" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.05 0.042"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= ОСЬ 2: сгибание (вокруг Y) ================= -->
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <!-- вал 1 -> вал 2: X -5, Y 0, Z 42 мм -->
+    <origin xyz="-0.005 0 0.042" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-1.5708" upper="1.5708" effort="2.5" velocity="1.5"/>
+  </joint>
+
+  <link name="link2">
+    <visual>
+      <origin xyz="0 0 0.0395" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.05 0.079"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.0395" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.05 0.079"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= ОСЬ 3: сгибание (вокруг -Y) ================= -->
+  <joint name="joint3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <!-- вал 2 -> вал 3: Z 79 мм -->
+    <origin xyz="0 0 0.079" rpy="0 0 0"/>
+    <!-- Проверено на железе: при q3 = 0 (серва 10) предплечье вертикально,
+         а при q3 = -10° (серва 0) уходит назад. С +Y модель была зеркальна. -->
+    <axis xyz="0 -1 0"/>
+    <limit lower="-0.1746" upper="1.3963" effort="2.5" velocity="1.5"/>
+  </joint>
+
+  <link name="link3">
+    <visual>
+      <origin xyz="0 0 0.0385" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.05 0.077"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.0385" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.05 0.077"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= ОСЬ 4: сгибание (вокруг Y) ================= -->
+  <joint name="joint4" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <!-- вал 3 -> вал 4: Z 77 мм -->
+    <origin xyz="0 0 0.077" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-1.5708" upper="1.5708" effort="2.5" velocity="1.5"/>
+  </joint>
+
+  <link name="link4">
+    <visual>
+      <origin xyz="0.0005 0.0125 0.0335" rpy="0 0 0"/>
+      <geometry><box size="0.04 0.04 0.07"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0005 0.0125 0.0335" rpy="0 0 0"/>
+      <geometry><box size="0.04 0.04 0.07"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ================= ОСЬ 5: поворот кисти (вокруг Z) ================= -->
+  <joint name="joint5" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <!-- вал 4 -> вал 5: X 1, Y 25, Z 67 мм -->
+    <origin xyz="0.001 0.025 0.067" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="3.1416" effort="2.5" velocity="1.5"/>
+  </joint>
+
+  <link name="link5">
+    <visual>
+      <origin xyz="0.006 -0.008 0.0115" rpy="0 0 0"/>
+      <geometry><box size="0.045 0.045 0.023"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.006 -0.008 0.0115" rpy="0 0 0"/>
+      <geometry><box size="0.045 0.045 0.023"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ============ ПРИВОД ЗАХВАТА: подвижная губка (вокруг X) ============ -->
+  <!-- Не ось руки: положение кисти не меняет, только раскрытие губок -->
+  <joint name="gripper_joint" type="revolute">
+    <parent link="link5"/>
+    <child link="gripper_finger"/>
+    <!-- вал 5 -> вал 6: X 12, Y -16, Z 23 мм -->
+    <origin xyz="0.012 -0.016 0.023" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.0" upper="1.5708" effort="1.0" velocity="1.5"/>
+  </joint>
+
+  <!-- подвижная губка: от вала 6 до кончиков 65 мм -->
+  <link name="gripper_finger">
+    <visual>
+      <origin xyz="0 0 0.0325" rpy="0 0 0"/>
+      <geometry><box size="0.02 0.015 0.065"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.0325" rpy="0 0 0"/>
+      <geometry><box size="0.02 0.015 0.065"/></geometry>
+    </collision>
+  </link>
+
+  <!-- неподвижная губка: жестко на кисти, параллельно подвижной -->
+  <link name="fixed_jaw">
+    <visual>
+      <origin xyz="0 0 0.0325" rpy="0 0 0"/>
+      <geometry><box size="0.02 0.015 0.065"/></geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.0325" rpy="0 0 0"/>
+      <geometry><box size="0.02 0.015 0.065"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="fixed_jaw_joint" type="fixed">
+    <parent link="link5"/>
+    <child link="fixed_jaw"/>
+    <!-- смещение губки вбок от подвижной; уточним по фото -->
+    <origin xyz="0.012 -0.056 0.023" rpy="0 0 0"/>
+  </joint>
+
+</robot>

@@ -1,0 +1,6 @@
+# Плата манипулятора: CH340 (1a86:7523), Arduino Nano.
+# Постоянное имя /dev/minipulator вместо ttyUSB0/ttyUSB1 и доступ без группы dialout.
+# Установка:
+#   sudo cp udev/99-minipulator.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="minipulator", MODE="0666"

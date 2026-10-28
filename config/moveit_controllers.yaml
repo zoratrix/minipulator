@@ -1,0 +1,19 @@
+# Исполнитель выбран один: действие FollowJointTrajectory (moveit_simple_controller_manager).
+# Само действие отдаёт ros2/trajectory_executor.py, мост остаётся как есть.
+# Путь: /arm_controller/follow_joint_trajectory — имя контроллера + action_ns.
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+trajectory_execution:
+  # Мост догоняет цель с ограничением 60 °/с и по времени трек не держит,
+  # поэтому обрывать исполнение по опозданию нельзя.
+  execution_duration_monitoring: false
+  allowed_execution_duration_scaling: 2.0
+
+moveit_simple_controller_manager:
+  controller_names:
+    - arm_controller
+  arm_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints: [joint1, joint2, joint3, joint4, joint5, gripper_joint]

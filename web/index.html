@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Манипулятор — пульт</title>
+<link rel="stylesheet" href="/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "/vendor/three.module.js",
+    "three/addons/": "/vendor/addons/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <header>
+      <div class="brand"><span id="dot" class="dot"></span>Манипулятор</div>
+      <div id="status">нет связи</div>
+    </header>
+
+    <section class="card">
+      <div class="tabs">
+        <button data-mode="joints" class="active">Ползунки</button>
+        <button data-mode="stick">Джойстик</button>
+      </div>
+
+      <div id="panel-joints"></div>
+
+      <div id="panel-stick" hidden>
+        <div class="stick">
+          <div class="pad-box">
+            <span class="ax top">↑</span>
+            <span class="ax bottom">↓</span>
+            <span class="ax left">←</span>
+            <span class="ax right">→</span>
+            <div id="pad"><div id="knob"></div></div>
+          </div>
+          <div class="z-col">
+            <span class="zlbl">+Z</span>
+            <input id="zslider" type="range" min="-1" max="1" step="0.01" value="0">
+            <span class="zlbl">−Z</span>
+          </div>
+        </div>
+        <p class="hint">стик: → ← вправо/влево, ↑ ↓ от себя/к себе.<br>
+          ползунок: Z вверх/вниз; отпустил — вернулся в центр.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Положение</h2>
+      <table id="readout"></table>
+      <p class="warn">Внимание: текущие углы являются расчётными и могут не соответствовать
+        фактическим, поскольку у моторов робота нет обратной связи.</p>
+    </section>
+
+    <div class="actions">
+      <button id="home">Домой</button>
+      <button id="open">Открыть</button>
+      <button id="close">Закрыть</button>
+    </div>
+
+    <button id="stop">СТОП</button>
+  </aside>
+
+  <main id="view">
+    <div class="view-tabs">
+      <button data-view="3d" class="active">3D</button>
+      <button data-view="logs">Логи</button>
+    </div>
+    <div id="scene">
+      <div class="legend">X — красная · Y — зелёная · Z — синяя</div>
+    </div>
+    <div id="logs" hidden></div>
+  </main>
+
+  <section id="program-panel">
+    <div class="prog-head">
+      <h2>Программа</h2>
+      <span id="prog-status" class="hint">точек: 0</span>
+    </div>
+
+    <div class="prog-actions">
+      <button id="add-step" title="добавить текущую позу">＋ Точка</button>
+      <button id="add-wait" title="вставить паузу">⏸ Пауза</button>
+      <button id="run-program" title="выполнить">▶ Запустить</button>
+      <button id="stop-program" title="остановить">■</button>
+      <button id="clear-program" class="danger" title="очистить список точек">Очистить</button>
+    </div>
+
+    <div class="prog-tools">
+      <label class="mini">скорость по умолчанию
+        <input id="prog-speed" type="number" min="0.1" max="1" step="0.05" value="0.4">
+      </label>
+      <label class="mini check"><input id="loop-program" type="checkbox"> по кругу</label>
+      <button id="save-program">Сохранить…</button>
+      <button id="load-program">Загрузить…</button>
+    </div>
+
+    <input id="prog-desc" class="prog-desc" placeholder="описание программы" spellcheck="false">
+
+    <details id="library">
+      <summary>Библиотека</summary>
+      <ul id="lib-list"></ul>
+    </details>
+
+    <ol id="steps"></ol>
+  </section>
+</div>
+
+<div id="fs-modal" hidden>
+  <div class="modal">
+    <h3 id="fs-title">Сохранить программу</h3>
+    <div class="fs-bar">
+      <button id="fs-up" title="наверх">↑</button>
+      <input id="fs-path" spellcheck="false">
+    </div>
+    <div id="fs-list"></div>
+    <div class="fs-save-row">
+      <input id="fs-name" value="program.json" spellcheck="false">
+      <button id="fs-cancel">Отмена</button>
+      <button id="fs-save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

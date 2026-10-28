@@ -1,0 +1,10 @@
+# Единственное место, где ограничена скорость планирования: 1.0 рад/с = 57 °/с.
+# Угловые пределы в robot.urdf не трогаем. Ползунок Velocity Scaling в RViz
+# масштабирует это: 0.5 ≈ 29 °/с, 1.0 = 57 °/с.
+joint_limits:
+  joint1: {has_velocity_limits: true, max_velocity: 1.0, has_acceleration_limits: true, max_acceleration: 3.0}
+  joint2: {has_velocity_limits: true, max_velocity: 1.0, has_acceleration_limits: true, max_acceleration: 3.0}
+  joint3: {has_velocity_limits: true, max_velocity: 1.0, has_acceleration_limits: true, max_acceleration: 3.0}
+  joint4: {has_velocity_limits: true, max_velocity: 1.0, has_acceleration_limits: true, max_acceleration: 3.0}
+  joint5: {has_velocity_limits: true, max_velocity: 1.0, has_acceleration_limits: true, max_acceleration: 3.0}
+  gripper_joint: {has_velocity_limits: true, max_velocity: 1.0, has_acceleration_limits: true, max_acceleration: 3.0}
