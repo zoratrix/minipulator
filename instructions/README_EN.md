@@ -1,9 +1,9 @@
 # minipulator
 
 ROS 2 Jazzy package for a 6-servo desktop manipulator controlled by an Arduino
-Nano over USB serial. The arm has no encoders: the serial bridge publishes the
-commanded joint angles, MoveIt plans in joint space, and a browser UI provides
-joint sliders, a 3D gizmo, a joystick and a point-teaching program editor.
+Nano over USB serial. The servos have no feedback. Motion planning is done in
+MoveIt. The robot is operated through a web UI: manual control, creating,
+saving and running programs.
 
 Русская версия этого README: [`../README.md`](../README.md).
 
@@ -11,22 +11,19 @@ joint sliders, a 3D gizmo, a joystick and a point-teaching program editor.
 
 | Part | Notes |
 | --- | --- |
-| 5 arm servos + 1 gripper servo | TD-8120MG or similar PWM servos, 180° range |
+| 5 arm servos + 1 gripper servo | TD-8120MG, 180° range |
 | Arduino Nano (ATmega328P) | CH340 USB bridge, VID `1a86`, PID `7523` |
 | Servo power supply | 5–6 V, sized for the stall current of all servos; common ground with the Nano |
 | PC | Ubuntu 24.04 with ROS 2 Jazzy |
 
-Servo signal pins are D4–D9 (arm joints 1–5, then the gripper). There is no
-feedback path: `/joint_states` are the angles the bridge last commanded, not
-measured positions.
+Servo signal pins are D4–D9 (arm joints 1–5, then the gripper).
 
 ## Features
 
-- MoveIt 2 configuration for the arm and the gripper: OMPL, KDL, position-only IK.
-- Serial bridge: angle conversion, homing at start, 20 Hz state publishing.
-- Web UI: sliders, 3D view, gizmo, joystick, program editor, logs.
+- Motion planning through MoveIt 2: OMPL, KDL, position-only IK.
+- Communication with the low-level board (Arduino Nano) over a serial port.
+- Web UI with manual control, 3D model, program editor and logs.
 - `FollowJointTrajectory` executor for MoveIt and programs.
-- Firmware sketch and udev rule.
 
 ## Repository layout
 
@@ -70,12 +67,12 @@ source install/setup.bash
 
 ## udev rule
 
-Why: a CH340 board can get a different device number each time it is plugged in
+A CH340 board can get a different device number each time it is plugged in
 (`/dev/ttyUSB0`, `/dev/ttyUSB1`), and access depends on the `dialout` group.
 The rule creates a stable `/dev/minipulator` with 0666 permissions, so the
 launch commands and the bridge do not depend on the number.
 
-When: once after installing the package, before the first run with the board.
+Apply it once after installing the package, before the first run with the board.
 If the port disappears after replugging, check the rule.
 
 ```bash
@@ -93,13 +90,12 @@ ros2 launch minipulator teleop.launch.py port:=/dev/ttyUSB0
 
 ## Firmware
 
-Open `firmware/minipulator/minipulator.ino` in the Arduino IDE, select
-**Arduino Nano** and **ATmega328P (Old Bootloader)** for CH340 clones, and
-upload. The sketch uses only the `Servo` library.
+Open `firmware/minipulator/minipulator.ino` in the Arduino IDE, select the
+**Arduino Nano** board (some boards require the **ATmega328P (Old Bootloader)**
+bootloader) and upload. The sketch uses only the `Servo` library.
 
 On power-up the board waits 1.5 s, attaches the servos one by one (250 ms
-apart) and moves to the start pose. Keep the arm free of obstacles during this
-sequence.
+apart) and moves to the start pose.
 
 Serial protocol (115200 baud, ASCII lines, `\n`):
 
@@ -131,8 +127,9 @@ hardware is touched.
 ros2 launch minipulator teleop.launch.py
 ```
 
-The sliders publish `/target_joint_states`, the bridge moves the servos and
-publishes `/joint_states` for RViz. No MoveIt.
+Direct servo control with the sliders: the chosen positions are published to
+`/target_joint_states`, the bridge moves the servos and publishes
+`/joint_states` for RViz.
 
 ### MoveIt in RViz
 
@@ -169,27 +166,13 @@ ros2 run minipulator demos hello --speed 0.5 --pause 0.2
 
 ## Web UI
 
-- **Sliders** — one row per joint and the gripper; the number box accepts
-  degrees. Values are written to `/target_joint_states` directly.
-- **Joystick** — horizontal stick movement drives the Y axis, vertical drives X;
-  the vertical slider drives Z. Step 2 mm at 20 Hz, IK runs in `move_group`.
-- **3D view** — built from `urdf/robot.urdf` in the browser. The blue sphere at
-  the wrist is a drag handle: the arm follows it in 2 cm IK steps.
-- **Home / Open / Close / STOP** — start pose, gripper at 1.2 rad and 0.3 rad,
-  and a freeze at the current pose.
-- **Program** panel — see below.
-- **Logs** — `/rosout` of every node, polled once per second.
-
-The UI is single-user. Programs and the library index are stored in
-`~/.minipulator`, not in the package.
-
-### Programs
+### Programming the robot
 
 A program is a list of steps:
 
-- `pose` — five arm angles (rad), gripper angle, pause after arrival (seconds)
-  and speed (0.1–1.0 of the MoveIt limits).
-- `wait` — a standalone pause in milliseconds; the arm holds its pose.
+- `pose` — link rotation angles (rad), gripper opening angle, pause after
+  reaching the point (s) and speed (0.1–1.0 of the MoveIt limits).
+- `wait` — a standalone pause in milliseconds; the robot holds its pose.
 
 Each step has a name, editable in the list. `▶` runs one step, `👁` plans it
 without moving and draws the wrist path, `⧉` duplicates it, `↑`/`↓` reorder,
@@ -218,8 +201,8 @@ Program JSON:
 
 ## Joint conventions
 
-`joint1`…`joint5` are the arm, `gripper_joint` is the jaw. The bridge converts
-between model angles and servo angles:
+`joint1`…`joint5` are the robot links, `gripper_joint` drives the gripper jaw.
+The bridge converts between model angles and servo angles:
 
 ```
 q_rad      = sign * (servo_deg - zero_deg) * pi / 180
@@ -249,12 +232,7 @@ transitions at 150 °/s and enforces a minimum move time.
 
 The arm is open loop. A servo that stalls, a blocked joint or a detached cable
 is not detected by any node; `/joint_states` keep reporting the commanded
-angles. Keep a power switch within reach, do not put hands into the workspace
-during programs, and do not rely on the web UI for emergency stop.
-
-Limits are enforced by the URDF, by MoveIt and by the firmware. The firmware
-keeps torque on a serial watchdog so the arm does not fall under its own
-weight; on boot it always moves to the start pose.
+angles.
 
 ## Adapting to another robot
 
@@ -279,7 +257,5 @@ open-loop servos, different sizes or URDF) follow
 ## Limitations
 
 - No encoders, no force sensing, no cameras.
-- The URDF uses boxes and has no inertial data; the package is for MoveIt, not
-  for Gazebo.
-- The web server is a single-user tool without authentication; bind it to
-  `127.0.0.1` unless you trust the network.
+- The URDF is built from boxes and does not account for inertia.
+- The web server is a single-user tool without authentication.
